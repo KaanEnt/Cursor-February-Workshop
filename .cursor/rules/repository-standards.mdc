@@ -1,0 +1,59 @@
+---
+description: Repository-wide coding standards that apply to every file and every conversation. Covers naming, file structure, imports, error handling, and git conventions.
+alwaysApply: true
+---
+
+# Repository-Wide Standards
+
+## File & Folder Naming
+
+- Files: `kebab-case` for all files (`user-profile.ts`, `auth-middleware.ts`)
+- Components: `PascalCase` filename matching the default export (`UserProfile.tsx`)
+- Test files: co-located as `*.test.ts` or `*.spec.ts` next to the source, OR in a `__tests__/` directory mirroring the source tree
+- No `index.ts` barrel files unless the module is a public-facing package boundary
+
+## Import Order
+
+Organize imports in this order, separated by blank lines:
+
+1. Node/runtime built-ins (`node:fs`, `node:path`)
+2. External packages (`react`, `next`, `zod`)
+3. Internal aliases (`@/lib`, `@/components`)
+4. Relative imports (`./utils`, `../types`)
+
+```typescript
+import { readFile } from "node:fs/promises";
+
+import { z } from "zod";
+import { clsx } from "clsx";
+
+import { db } from "@/lib/database";
+import { logger } from "@/lib/logger";
+
+import { formatDate } from "./utils";
+```
+
+## Error Handling
+
+- Never swallow errors with empty `catch` blocks
+- Use typed error classes for domain errors
+- Log errors with structured context (not just `console.log(err)`)
+- Propagate errors to the caller unless you can fully recover
+
+## Environment Variables
+
+- Access env vars through a validated config module, never raw `process.env` reads scattered through the codebase
+- All env vars must have types and validation (use `zod` or similar)
+- Never commit `.env` files — only `.env.example` with dummy values
+
+## Git Conventions
+
+- Branch names: `feat/short-description`, `fix/short-description`, `chore/short-description`
+- Commit messages: imperative mood, under 72 chars (`add user auth middleware`, not `added user auth middleware`)
+- One logical change per commit — don't bundle unrelated changes
+
+## Documentation
+
+- Every exported function/class must have a JSDoc/TSDoc comment explaining *what* it does and *why* (not *how*)
+- README files describe setup, architecture decisions, and non-obvious conventions
+- Don't write comments that narrate the code — if the code needs narration, refactor it to be clearer

@@ -1,0 +1,37 @@
+---
+description: Triggers prompt evaluation workflow when modifying AI-facing prompts, skills, agent commands, or eval suites. Ensures changes to prompts are validated against eval criteria before being finalized.
+globs: ["**/*.md", "**/*.mdc", "**/*.yaml", "**/prompts/**", "**/evals/**", ".cursor/commands/**", ".claude/skills/**", ".agents/skills/**"]
+alwaysApply: false
+---
+
+# Prompt Eval Hook
+
+When modifying any AI-facing prompt (skill file, agent command, or system prompt), follow this process:
+
+## Activation
+
+This rule applies when you are:
+- Editing a `SKILL.md` file in `.claude/skills/` or `.agents/skills/`
+- Editing a command file in `.cursor/commands/`
+- Editing prompt templates in any `prompts/` directory
+- Modifying eval suites or criteria in `evals/`
+
+This rule does NOT apply to:
+- Editing cursor rules (`.mdc` files in `.cursor/rules/`)
+- Editing documentation or READMEs
+- Editing source code that doesn't contain prompts
+
+## Process
+
+### 1. Check for an existing eval suite
+Look for `evals/<prompt-name>/eval-suite.yaml`. If one exists, any prompt changes should be re-evaluated.
+
+### 2. If no eval suite exists
+Read `.claude/skills/prompt-eval-framework/SKILL.md` and create one before making prompt changes. Minimum: 5 test cases, 3 criteria.
+
+### 3. After making prompt changes
+- Increment the version number
+- Save the new prompt version (never overwrite)
+- Run the eval suite using the `/prompt-eval` command
+- Compare scores against the previous version
+- Only finalize if the new version scores equal to or higher than the previous

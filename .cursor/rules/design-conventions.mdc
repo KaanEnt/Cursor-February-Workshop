@@ -1,0 +1,111 @@
+---
+description: UI and design conventions for component styling, layout patterns, spacing, color tokens, accessibility, and responsive design in frontend code.
+globs: ["**/*.tsx", "**/*.jsx", "**/*.css", "**/*.scss", "**/*.module.css"]
+alwaysApply: false
+---
+
+# Design & UI Conventions
+
+## Design Tokens Over Hard-Coded Values
+
+Never hard-code colors, spacing, font sizes, or shadows. Always reference design tokens or CSS custom properties.
+
+```typescript
+// ❌ BAD
+<div style={{ padding: "16px", color: "#1a1a1a", fontSize: "14px" }}>
+
+// ✅ GOOD
+<div className="p-4 text-primary text-sm">
+
+// ✅ GOOD (CSS modules / custom properties)
+// .card { padding: var(--spacing-4); color: var(--color-text-primary); }
+```
+
+## Component Composition Over Prop Sprawl
+
+Split large components. If a component accepts more than 5-6 props for visual variants, decompose it into composed sub-components.
+
+```typescript
+// ❌ BAD — prop explosion
+<Card title="..." subtitle="..." icon="..." badge="..." badgeColor="..." size="lg" variant="outlined" />
+
+// ✅ GOOD — composition
+<Card variant="outlined">
+  <Card.Header>
+    <Card.Icon name="settings" />
+    <Card.Title>Settings</Card.Title>
+  </Card.Header>
+  <Card.Badge color="green">Active</Card.Badge>
+</Card>
+```
+
+## Responsive Design: Mobile-First
+
+Always write styles mobile-first and layer on larger breakpoints. Never write desktop-first and override downward.
+
+```css
+/* ❌ BAD — desktop-first */
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+/* ✅ GOOD — mobile-first */
+.grid { display: grid; grid-template-columns: 1fr; }
+@media (min-width: 768px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+```
+
+## Accessibility Requirements
+
+Every interactive element must be keyboard navigable and have appropriate ARIA attributes.
+
+- All `<img>` tags require `alt` text (use `alt=""` only for purely decorative images)
+- Form inputs require associated `<label>` elements
+- Color contrast must meet WCAG AA (4.5:1 for normal text, 3:1 for large text)
+- Focus states must be visible — never `outline: none` without a replacement
+
+```typescript
+// ❌ BAD
+<div onClick={handleClick}>Click me</div>
+
+// ✅ GOOD
+<button type="button" onClick={handleClick}>Click me</button>
+
+// ✅ GOOD — when a div must be interactive
+<div role="button" tabIndex={0} onClick={handleClick} onKeyDown={handleKeyDown}>
+  Click me
+</div>
+```
+
+## Consistent Spacing Scale
+
+Use a spacing scale (4px base). Don't invent arbitrary spacing values.
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `spacing-1` | 4px | Tight inline gaps |
+| `spacing-2` | 8px | Icon-to-label, small padding |
+| `spacing-3` | 12px | Compact card padding |
+| `spacing-4` | 16px | Standard padding, section gaps |
+| `spacing-6` | 24px | Card padding, group spacing |
+| `spacing-8` | 32px | Section spacing |
+| `spacing-12` | 48px | Page section margins |
+
+## Animation Guidelines
+
+- Keep transitions under 300ms for UI feedback
+- Use `ease-out` for entrances, `ease-in` for exits
+- Respect `prefers-reduced-motion` — disable non-essential animation
+
+```css
+.element {
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .element { transition: none; }
+}
+```
+
+## Layout Patterns
+
+- Use CSS Grid for 2D layouts (page structure, card grids)
+- Use Flexbox for 1D alignment (navbars, inline groups)
+- Avoid absolute positioning for layout — use it only for overlays, tooltips, and floating elements

@@ -1,0 +1,119 @@
+---
+description: Enforces consistent, strict TypeScript typing across all .ts and .tsx files. Prevents implicit any, enforces return types, and requires explicit interfaces over inline types.
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript Strict Typing Standards
+
+## No Implicit `any`
+
+Every variable, parameter, and return value must have an explicit type. Never rely on implicit `any`.
+
+```typescript
+// ❌ BAD
+function process(data) {
+  return data.map(item => item.name);
+}
+
+// ✅ GOOD
+function process(data: UserRecord[]): string[] {
+  return data.map((item) => item.name);
+}
+```
+
+## Prefer `interface` Over `type` for Object Shapes
+
+Use `interface` for object shapes and public API contracts. Reserve `type` for unions, intersections, mapped types, and primitives.
+
+```typescript
+// ❌ BAD — type alias for a plain object shape
+type UserProps = {
+  name: string;
+  email: string;
+};
+
+// ✅ GOOD
+interface UserProps {
+  name: string;
+  email: string;
+}
+
+// ✅ GOOD — type for union/intersection
+type Result = Success | Failure;
+type Nullable<T> = T | null;
+```
+
+## Explicit Function Return Types
+
+All exported functions and all functions longer than a single expression must declare their return type.
+
+```typescript
+// ❌ BAD
+export function getUser(id: string) {
+  return db.users.findOne({ id });
+}
+
+// ✅ GOOD
+export function getUser(id: string): Promise<User | null> {
+  return db.users.findOne({ id });
+}
+```
+
+## No `as` Type Assertions Unless Narrowing From `unknown`
+
+Avoid `as` casts — they silence the compiler. Use type guards or runtime checks instead.
+
+```typescript
+// ❌ BAD
+const user = response.data as User;
+
+// ✅ GOOD
+function isUser(data: unknown): data is User {
+  return typeof data === "object" && data !== null && "id" in data;
+}
+
+if (isUser(response.data)) {
+  const user = response.data;
+}
+```
+
+## Enums: Prefer `const` Enums or String Unions
+
+```typescript
+// ❌ BAD — numeric enum (opaque at runtime)
+enum Status { Active, Inactive }
+
+// ✅ GOOD
+type Status = "active" | "inactive";
+
+// ✅ ALSO GOOD — when you need runtime object
+const Status = { Active: "active", Inactive: "inactive" } as const;
+type Status = (typeof Status)[keyof typeof Status];
+```
+
+## Strict Null Handling
+
+Never use non-null assertion (`!`) to bypass null checks. Handle null/undefined explicitly.
+
+```typescript
+// ❌ BAD
+const name = user!.name;
+
+// ✅ GOOD
+const name = user?.name ?? "Anonymous";
+```
+
+## Generic Constraints
+
+Always constrain generic parameters when possible.
+
+```typescript
+// ❌ BAD
+function merge<T, U>(a: T, b: U) { ... }
+
+// ✅ GOOD
+function merge<T extends Record<string, unknown>, U extends Record<string, unknown>>(
+  a: T, b: U
+): T & U { ... }
+```
