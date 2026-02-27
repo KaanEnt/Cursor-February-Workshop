@@ -58,22 +58,24 @@ The prompt text should be:
 Read the project briefing at .specstory/context/<date>-compact.md — this contains the full context from the previous session. Read it completely before doing anything else, then ask me what to work on next.
 ```
 
-To generate the deeplink, run a shell command:
+Generate the deeplink URL and then open it automatically in two steps:
 
+**Step 1 — Generate the URL:**
 ```bash
-node -e "const text = 'Read the project briefing at .specstory/context/<date>-compact.md — this contains the full context from the previous session. Read it completely before doing anything else, then ask me what to work on next.'; const url = new URL('cursor://anysphere.cursor-deeplink/prompt'); url.searchParams.set('text', text); console.log(url.toString());"
+node -e "const text = 'Read the project briefing at .specstory/context/<date>-compact.md. This contains the full context from the previous session. Read it completely before doing anything else, then ask me what to work on next.'; const url = new URL('cursor://anysphere.cursor-deeplink/prompt'); url.searchParams.set('text', text); console.log(url.toString());"
 ```
 
-Present the result to the user as:
+**Step 2 — Open it (use the URL output from step 1):**
+- Windows (PowerShell): `Start-Process "<deeplink URL>"`
+- macOS: `open "<deeplink URL>"`
+- Linux: `xdg-open "<deeplink URL>"`
 
+This launches a new Cursor chat with the handoff prompt pre-filled. No manual clicking.
+
+Confirm to the user:
 ```
-Context compacted and saved to .specstory/context/<date>-compact.md
-
-Click to continue in a new chat:
-<deeplink URL>
-
-Or web link:
-https://cursor.com/link/prompt?text=<same encoded text>
+Context compacted → .specstory/context/<date>-compact.md
+New chat opened with full context loaded.
 ```
 
 ## Rules

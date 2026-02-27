@@ -23,11 +23,26 @@ Run the `/summarize-chat` command to produce a structured summary of the convers
 ### 2. Compact Second
 Run the `/compact-context` command to compress the summary + project state into a dense briefing document that can bootstrap a new chat.
 
-### 3. Present to the User
-After both are saved, tell the user:
-- Where the summary was saved
-- Where the compacted context was saved
-- The exact prompt to paste into a new chat to continue seamlessly
+### 3. Generate Deeplink and Auto-Open
+
+After saving the compacted context, generate a Cursor deeplink and **open it automatically** via shell:
+
+```bash
+node -e "const text = 'Read the project briefing at .specstory/context/<date>-compact.md — this contains the full context from the previous session. Read it completely before doing anything else, then ask me what to work on next.'; const url = new URL('cursor://anysphere.cursor-deeplink/prompt'); url.searchParams.set('text', text); console.log(url.toString());"
+```
+
+Then immediately open it:
+
+- Windows (PowerShell): `Start-Process "cursor://anysphere.cursor-deeplink/prompt?text=..."`
+- macOS: `open "cursor://anysphere.cursor-deeplink/prompt?text=..."`
+- Linux: `xdg-open "cursor://anysphere.cursor-deeplink/prompt?text=..."`
+
+This launches a new Cursor chat pre-filled with the handoff prompt — no manual clicking required.
+
+### 4. Confirm to the User
+After opening, briefly tell the user:
+- Where the summary and context files were saved
+- That a new chat was opened with the context loaded
 
 ## Proactive Trigger
 
