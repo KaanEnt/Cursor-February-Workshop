@@ -17,13 +17,14 @@ This rule applies when the user says any of:
 
 ## Process
 
-### 1. Summarize First
-Run the `/summarize-chat` command to produce a structured summary of the conversation. This captures goals, decisions, file changes, and open items.
+### 1. Summarize + Compact in Parallel
+Launch **both** agents simultaneously using two Task tool calls in a single message:
+- **Summarize agent** — follows the `/summarize-chat` command to produce a structured summary of the conversation (goals, decisions, file changes, open items) and saves it to `.specstory/summaries/`.
+- **Compact agent** — follows the `/compact-context` command to independently gather project state from git and `.specstory/history/`, then produces a dense briefing document and saves it to `.specstory/context/`.
 
-### 2. Compact Second
-Run the `/compact-context` command to compress the summary + project state into a dense briefing document that can bootstrap a new chat.
+Both agents work from the same source material (conversation history, git state, specstory history) so neither depends on the other's output. Wait for both to finish before proceeding.
 
-### 3. Generate Deeplink and Auto-Open
+### 2. Generate Deeplink and Auto-Open
 
 After saving the compacted context, generate a Cursor deeplink and **open it automatically** via shell:
 
@@ -39,7 +40,7 @@ Then immediately open it:
 
 This launches a new Cursor chat pre-filled with the handoff prompt — no manual clicking required.
 
-### 4. Confirm to the User
+### 3. Confirm to the User
 After opening, briefly tell the user:
 - Where the summary and context files were saved
 - That a new chat was opened with the context loaded

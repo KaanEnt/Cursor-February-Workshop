@@ -11,9 +11,9 @@ Run these commands to capture the project's current state:
 - `git diff --stat` — quantify what changed
 - `git log --oneline -10` — recent commit history for continuity
 
-### 2. Read the Chat Summary
+### 2. Reconstruct the Conversation Timeline
 
-If `/summarize-chat` was run first, read the summary from `.specstory/summaries/`. If no summary exists, read the most recent file from `.specstory/history/` to reconstruct the conversation timeline, then generate a summary inline.
+Read the most recent file from `.specstory/history/` (sorted by filename timestamp) to reconstruct the conversation timeline. Extract goals, decisions, file changes, and open items directly — do NOT depend on a summary file from `/summarize-chat`. This command must be fully self-contained so it can run in parallel with the summarize agent.
 
 ### 3. Build the Compacted Context
 
