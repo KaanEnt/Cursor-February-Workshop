@@ -1,0 +1,73 @@
+---
+description: Rules for Next.js API routes and AI SDK integration. Covers route typing, Anthropic config, tool definitions, and sandboxed execution.
+globs: ["**/*.ts"]
+alwaysApply: false
+---
+
+# API Route & AI SDK Rules
+
+## Route Handler Typing
+
+```typescript
+import { streamText } from "ai";
+
+export async function POST(req: Request): Promise<Response> {
+  const { messages } = await req.json();
+  const result = streamText({ model, messages, tools });
+  return result.toDataStreamResponse();
+}
+```
+
+- Every route handler must have an explicit return type annotation
+- Use the AI SDK's streaming helpers (`streamText`, `toDataStreamResponse`) — don't manually construct SSE streams
+
+## Tool Definitions
+
+Tools live in `src/lib/tools/index.ts`. When adding a new tool:
+
+1. Use the `tool()` function from `ai`
+2. Every parameter gets a Zod schema with `.describe()`
+3. `execute` returns a typed result with a `success` boolean
+4. Validate all file paths through `sandbox.ts` before use
+
+```typescript
+my_tool: tool({
+  description: `What it does and when to use it.`,
+  inputSchema: z.object({
+    param: z.string().describe("What this controls"),
+  }),
+  execute: async ({ param }): Promise<{ success: boolean; error?: string }> => {
+    const validation = validateEditPath(param);
+    if (!validation.valid) return { success: false, error: validation.error };
+    // ...
+  },
+}),
+```
+
+## Safety Rules
+
+- File writes restricted to `output/` via `validateWritePath`
+- Edits blocked for `.env`, `node_modules/`, `.git/`, lockfiles via `validateEditPath`
+- Shell commands go through `executeCommand` with destructive command blocking
+- Use `getProjectRoot()` as base — never hard-code absolute paths
+- Enforce timeouts: 30s for commands, 15s for network
+
+## Error Handling
+
+```typescript
+// ✅ GOOD — typed error with context
+const err = error as NodeJS.ErrnoException;
+return {
+  success: false,
+  error: err.code === "ENOENT"
+    ? `File not found: ${filePath}`
+    : `Error reading file: ${err.message}`,
+};
+
+// ❌ BAD
+catch (e) { return { error: String(e) }; }
+```
+
+## System Prompt
+
+The system prompt in `src/lib/prompts/system.ts` auto-discovers skills at runtime. When modifying it, version the change and re-evaluate using the prompt eval framework.

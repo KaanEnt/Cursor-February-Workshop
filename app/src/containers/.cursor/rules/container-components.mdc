@@ -1,0 +1,75 @@
+---
+description: Rules for container components — the self-contained UI regions (Header, Sidebar, MainContent, Footer, Chat). Enforces isolation, file structure, export conventions, and typing.
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Container Component Rules
+
+## What is a Container?
+
+A container is a self-contained UI region that occupies a named grid area in `AppShell`. Each container is isolated — it can crash, reload, or lazy-load independently.
+
+## File Structure Per Container
+
+Every container lives in `src/containers/<Name>/` and must have:
+
+```
+src/containers/<Name>/
+  <Name>.tsx       ← main component (default or named export)
+  index.ts         ← barrel re-export: export { Name } from "./<Name>"
+  <Name>State.ts   ← Zustand store (only if container has persistent state)
+```
+
+### Rules
+
+- One container per directory — never put two containers in the same folder
+- The barrel `index.ts` must only re-export — no logic, no side effects
+- Container filenames must match the directory name: `Header/Header.tsx`, not `Header/index.tsx`
+
+## Component Typing
+
+Every container must have a typed props interface, even if it currently takes no props:
+
+```typescript
+// ✅ GOOD
+interface SidebarProps {}
+
+export function Sidebar({}: SidebarProps) { ... }
+
+// ❌ BAD — no interface
+export function Sidebar() { ... }
+```
+
+## Isolation Rules
+
+1. **No cross-container imports.** Never import from another container directly. Share data via Zustand stores in `src/lib/stores/`.
+
+```typescript
+// ❌ BAD
+import { navItems } from "@/containers/Sidebar/Sidebar";
+
+// ✅ GOOD
+import { useNavStore } from "@/lib/stores/navigation";
+```
+
+2. **No grid-area styling.** Containers must not set `grid-area`. The parent `<div>` in `AppShell` owns placement.
+
+3. **`"use client"` when needed.** Containers with hooks, event handlers, or browser APIs must declare it. Server-renderable containers omit it.
+
+4. **Cleanup on unmount.** Containers can be remounted via key changes — every `useEffect` must return a cleanup function.
+
+```typescript
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => { ... };
+  document.addEventListener("keydown", handler);
+  return () => document.removeEventListener("keydown", handler);
+}, []);
+```
+
+## Chat Container (Special Case)
+
+- **Not** inside a `ContainerSlot` — renders as a direct sibling to `AppShell` in `layout.tsx`
+- Uses `position: fixed` to overlay the page
+- State (`ChatState.ts`) uses Zustand so it persists across shell re-renders
+- All AI integration (`useChat`) lives here, not in other containers

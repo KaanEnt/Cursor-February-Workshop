@@ -1,0 +1,49 @@
+---
+description: Rules for the lib layer — ErrorBoundary, ContainerSkeleton, utilities, tools, and prompts. Enforces the boundary between framework infrastructure and container business logic.
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Lib Layer Rules
+
+This directory contains framework infrastructure shared across the app. Nothing here should have knowledge of specific containers or their business logic.
+
+## ErrorBoundary
+
+- Must remain a class component (React requirement for `getDerivedStateFromError`)
+- Must expose `resetErrorBoundary` so `ContainerSlot` or users can trigger retry
+- Must log errors with the `[ContainerError]` prefix for searchability
+- Must accept optional `fallback` and `onError` props — typed, not `any`
+
+```typescript
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+}
+```
+
+## ContainerSkeleton
+
+- Accepts a `shape` prop typed to `SlotShape` — must stay in sync with `ContainerSlot`
+- Renders shape-appropriate loading states (tall skeleton for sidebar, wide for header, etc.)
+- Must not contain any actual content or business logic
+
+## Utils (`utils.ts`)
+
+- `cn()` is the className merge utility (clsx + tailwind-merge)
+- Keep this file minimal — only truly generic, zero-dependency helpers
+- If a utility is container-specific, it belongs in that container's directory
+
+## Tools (`tools/`)
+
+- All tool definitions follow the AI SDK `tool()` pattern with Zod schemas
+- Every tool's `execute` must validate inputs via `sandbox.ts` before any filesystem or shell operation
+- Tools must never import from `src/containers/` — they are backend infrastructure
+- `sandbox.ts` is the security boundary — all path validation and command blocking lives here
+
+## Prompts (`prompts/`)
+
+- `system.ts` generates the system prompt dynamically by reading `.claude/skills/` at runtime
+- Never hard-code skill names — the generator discovers them from the filesystem
+- Treat prompt changes as code changes — version and evaluate before shipping

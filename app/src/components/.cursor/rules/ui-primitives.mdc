@@ -1,0 +1,74 @@
+---
+description: Rules for UI primitive components. Enforces Radix UI + Tailwind patterns, variant typing with cva, forwardRef, and composition over configuration.
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# UI Primitives Rules
+
+All primitives in this directory wrap Radix UI with Tailwind styling.
+
+## Component Pattern
+
+```typescript
+import * as React from "react";
+import * as RadixPrimitive from "@radix-ui/react-<name>";
+import { cn } from "@/lib/utils";
+
+const Component = React.forwardRef<
+  React.ComponentRef<typeof RadixPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof RadixPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <RadixPrimitive.Root
+    ref={ref}
+    className={cn("base-classes", className)}
+    {...props}
+  />
+));
+Component.displayName = RadixPrimitive.Root.displayName;
+```
+
+### Rules
+
+1. **Always `forwardRef`** — primitives must forward refs
+2. **Always spread `...props`** — transparent to unknown props
+3. **Merge classNames via `cn()`** — never replace the consumer's `className`
+4. **Set `displayName`** — required for DevTools and error messages
+5. **Radix handles accessibility** — don't re-implement focus management, keyboard nav, or ARIA
+
+## Variants via `cva`
+
+```typescript
+import { cva, type VariantProps } from "class-variance-authority";
+
+const buttonVariants = cva("inline-flex items-center ...", {
+  variants: {
+    variant: {
+      default: "bg-primary text-primary-foreground",
+      destructive: "bg-destructive text-destructive-foreground",
+      outline: "border border-input bg-background",
+    },
+    size: {
+      default: "h-9 px-4 py-2",
+      sm: "h-8 px-3 text-xs",
+      lg: "h-10 px-8",
+    },
+  },
+  defaultVariants: { variant: "default", size: "default" },
+});
+
+interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
+```
+
+- Variant names must be descriptive (`"destructive"`, `"ghost"` — not `"v1"`, `"red"`)
+- Every variant set must have `defaultVariants`
+- Export the variants function alongside the component
+
+## Do Not
+
+- Don't add business logic — primitives are purely presentational
+- Don't import from `src/containers/` — zero knowledge of the app domain
+- Don't create one-off inline variants — add to the `cva` definition
+- Don't use inline styles — all styling through Tailwind classes

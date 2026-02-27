@@ -1,0 +1,59 @@
+---
+description: Overarching container architecture for the Next.js dashboard. Explains the micro-frontend-inspired isolation model using React Suspense, Error Boundaries, and key-based remounting.
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# Container Architecture
+
+This app uses a micro-frontend-inspired architecture at the component level. Isolation comes from React's built-in concurrent features — not iframes or Web Components.
+
+## Structural Layers
+
+```
+layout.tsx (root)
+├── AppShell              ← CSS Grid with named areas
+│   ├── ContainerSlot     ← ErrorBoundary + Suspense wrapper per slot
+│   │   ├── Header        ← container
+│   │   ├── Sidebar       ← container
+│   │   ├── MainContent   ← container (page children)
+│   │   └── Footer        ← container
+│   └── (grid ends)
+└── Chat                  ← fixed-position, outside the grid flow
+```
+
+## Invariants — Do Not Break These
+
+1. **Chat lives outside the grid.** It is a sibling to `AppShell` in `layout.tsx`, positioned `fixed`. It must never be placed inside `AppShell` or any `ContainerSlot`.
+
+2. **Every grid area routes through `ContainerSlot`.** No container is rendered directly in `AppShell` without being wrapped by `ContainerSlot`, which provides `ErrorBoundary` + `Suspense`.
+
+3. **Containers are isolated.** A crash in one container (e.g., Sidebar) must not take down another (e.g., MainContent). The `ErrorBoundary` per slot ensures this.
+
+4. **Zustand stores live outside React's tree.** State that must survive React re-renders (like `ChatState`) uses Zustand stores created at module scope, not React context.
+
+5. **The grid layout is defined in `AppShell` only.** Containers must not set their own `grid-area` — the wrapping `<div>` in `AppShell` owns the grid placement.
+
+## Data Flow for Container Reload
+
+```
+Event (HMR / WebSocket / user action)
+  → Registry updates module path for slot X
+    → AppShell bumps key for ContainerSlot X
+      → Old container unmounts (cleanup runs)
+      → Suspense shows ContainerSkeleton
+      → New container lazy-loads and mounts
+      → All other slots and Chat are unaffected
+```
+
+## File Location Conventions
+
+| Layer | Path | Purpose |
+|-------|------|---------|
+| Shell | `src/shell/` | `AppShell`, `ContainerSlot` — layout orchestration |
+| Containers | `src/containers/<Name>/` | Self-contained UI regions (Header, Sidebar, etc.) |
+| UI Primitives | `src/components/ui/` | Radix-based design system components |
+| Lib | `src/lib/` | ErrorBoundary, ContainerSkeleton, utils, tools |
+| State | `src/containers/<Name>/<Name>State.ts` | Zustand stores co-located with their container |
+| API | `src/app/api/` | Next.js API routes |
+| Pages | `src/app/` | Next.js pages and layouts |

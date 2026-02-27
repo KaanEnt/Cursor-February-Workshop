@@ -1,0 +1,71 @@
+---
+description: Zustand state management conventions for the containerized architecture. Enforces store typing, co-location, selector patterns, and separation from React's tree.
+globs: ["**/*State.ts", "**/*Store.ts"]
+alwaysApply: false
+---
+
+# Zustand State Rules
+
+## Why Zustand Here
+
+Stores are created at module scope — outside React's component tree. State survives when containers remount (key-based reload, HMR, Suspense re-suspension). React Context would lose state on remount.
+
+## Store Typing
+
+Every store must have an explicit interface. The interface includes both state values and actions.
+
+```typescript
+// ✅ GOOD
+interface ChatState {
+  isOpen: boolean;
+  toggleOpen: () => void;
+  setOpen: (open: boolean) => void;
+}
+
+export const useChatStore = create<ChatState>((set) => ({
+  isOpen: false,
+  toggleOpen: () => set((s) => ({ isOpen: !s.isOpen })),
+  setOpen: (open) => set({ isOpen: open }),
+}));
+
+// ❌ BAD — no interface, inline types
+export const useChatStore = create((set) => ({
+  isOpen: false,
+  toggleOpen: () => set((s: any) => ({ isOpen: !s.isOpen })),
+}));
+```
+
+## Naming
+
+| Pattern | Convention |
+|---------|-----------|
+| Interface | `<Name>State` (e.g., `ChatState`) |
+| Hook | `use<Name>Store` (e.g., `useChatStore`) |
+| File | `<ContainerName>State.ts` (co-located) |
+
+## Selectors — Always Use Them
+
+```typescript
+// ✅ GOOD — subscribes to specific slice
+const isOpen = useChatStore((s) => s.isOpen);
+const toggleOpen = useChatStore((s) => s.toggleOpen);
+
+// ❌ BAD — subscribes to everything
+const store = useChatStore();
+```
+
+## Co-location
+
+- Container-specific stores: `src/containers/Chat/ChatState.ts`
+- Shared stores (multi-container): `src/lib/stores/`
+- Stores must never import from component files — data flows store → component
+
+## Immutability
+
+```typescript
+// ✅ Spread nested objects
+set((s) => ({ filters: { ...s.filters, status: "active" } }));
+
+// ❌ Don't mutate in place
+set((s) => { s.filters.status = "active"; return s; });
+```

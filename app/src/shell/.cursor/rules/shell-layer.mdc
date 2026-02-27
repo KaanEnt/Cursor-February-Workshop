@@ -1,0 +1,54 @@
+---
+description: Rules for AppShell and ContainerSlot — the CSS Grid layout orchestration and ErrorBoundary + Suspense wrapping pattern.
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Shell Layer Rules
+
+## AppShell
+
+`AppShell` is the single source of truth for page layout. It defines a CSS Grid with named areas and wraps each area in a `ContainerSlot`.
+
+### Adding a New Grid Area
+
+When adding a new slot:
+
+1. Add the grid area name to the `grid-template-areas` string in `AppShell`
+2. Update `grid-cols` and `grid-rows` if the new area changes the grid dimensions
+3. Create a new `<div>` with `[grid-area:<name>]` containing a `<ContainerSlot>`
+4. Update the `SlotShape` union in `ContainerSlot.tsx` to include the new area name
+
+```typescript
+// ContainerSlot.tsx — keep this union in sync with AppShell's grid areas
+type SlotShape = "header" | "sidebar" | "main" | "footer";
+//                                                  ↑ add new names here
+```
+
+### Rules
+
+- `AppShell` accepts `children: React.ReactNode` — page content flows into the `main` slot
+- Never add business logic to `AppShell` — it is purely structural
+- Never import container components directly without wrapping in `ContainerSlot`
+- The grid definition (cols, rows, areas) must remain in one place — the `className` of the root `<div>`
+
+## ContainerSlot
+
+`ContainerSlot` is the isolation boundary. It wraps children in `ErrorBoundary` → `Suspense`.
+
+### Rules
+
+- Always wrap in this exact order: `ErrorBoundary` → `Suspense` → `{children}`
+- The `Suspense` fallback must be `<ContainerSkeleton shape={name} />`
+- The `name` prop is typed as `SlotShape` — adding untyped strings is a compile error
+- Never add state, effects, or side effects to `ContainerSlot` — wrapper only
+- Key-based remount: the `key` prop goes on `ContainerSlot` in `AppShell`, not internally
+
+```typescript
+// ✅ Key-based remount — key goes in AppShell
+<ContainerSlot name="sidebar" key={sidebarVersion}>
+  <Sidebar />
+</ContainerSlot>
+
+// ❌ Don't put the key inside ContainerSlot's implementation
+```
