@@ -1,0 +1,10 @@
+---
+description: Prepends a timestamp to every AI response for granular tracking in SpecStory history logs.
+alwaysApply: true
+---
+
+# Interaction Logging
+
+For every single response you generate, you must prepend the exact current time at the very top of your reply.
+
+Use this exact format: `[YYYY-MM-DD HH:MM:SS]`

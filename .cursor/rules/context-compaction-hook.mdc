@@ -1,0 +1,36 @@
+---
+description: Triggers context summarization and compaction when the user asks to summarize, compact, compress, or hand off the current chat. Also activates when the conversation exceeds ~40 back-and-forth exchanges as a proactive suggestion.
+alwaysApply: true
+---
+
+# Context Compaction Hook
+
+## Activation
+
+This rule applies when the user says any of:
+- "summarize this chat"
+- "compact the context"
+- "compress this conversation"
+- "create a new chat with context"
+- "hand off to a new session"
+- "save what we've done"
+
+## Process
+
+### 1. Summarize First
+Run the `/summarize-chat` command to produce a structured summary of the conversation. This captures goals, decisions, file changes, and open items.
+
+### 2. Compact Second
+Run the `/compact-context` command to compress the summary + project state into a dense briefing document that can bootstrap a new chat.
+
+### 3. Present to the User
+After both are saved, tell the user:
+- Where the summary was saved
+- Where the compacted context was saved
+- The exact prompt to paste into a new chat to continue seamlessly
+
+## Proactive Trigger
+
+If you notice the conversation has gone on for a very long time (many exchanges, multiple complex tasks completed), suggest compaction:
+
+> "This session has covered a lot of ground. Want me to summarize and compact the context so you can continue in a fresh chat without losing anything?"
