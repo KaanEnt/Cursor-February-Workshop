@@ -1,0 +1,103 @@
+---
+description: Backend conventions for server-side code — API routes, tool definitions, sandbox security, system prompt generation, and Node.js runtime concerns. Applies to all server-side TypeScript in the Next.js app.
+globs: ["app/src/app/api/**/*.ts", "app/src/lib/tools/**/*.ts", "app/src/lib/prompts/**/*.ts"]
+alwaysApply: false
+---
+
+# Backend Conventions
+
+Server-side code runs in the Node.js runtime (`export const runtime = 'nodejs'`). It handles AI orchestration, tool execution, file system access, and security enforcement.
+
+## Architecture Boundary
+
+Backend code lives in:
+- `src/app/api/` — Next.js route handlers (the only HTTP entry points)
+- `src/lib/tools/` — AI SDK tool definitions and the sandbox security layer
+- `src/lib/prompts/` — System prompt generation
+
+Backend code must **never**:
+- Import from `src/containers/`, `src/components/`, or `src/shell/`
+- Reference browser APIs (`window`, `document`, `localStorage`, DOM)
+- Use `"use client"` — these files are server-only
+
+## API Route Patterns
+
+```typescript
+export async function POST(req: Request) {
+  try {
+    const { messages }: { messages: UIMessage[] } = await req.json();
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // ... AI SDK logic ...
+
+    return result.toUIMessageStreamResponse();
+  } catch (error) {
+    const err = error as Error;
+    console.error("[Chat API Error]", err.message);
+    return new Response(
+      JSON.stringify({ error: "Failed to process request", message: err.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+```
+
+### Rules
+
+- Always set `export const runtime = 'nodejs'` and `export const maxDuration` on routes that call external APIs
+- Use AI SDK streaming helpers (`streamText`, `toUIMessageStreamResponse`) — never manually construct SSE
+- Limit tool step count with `stopWhen: stepCountIs(n)` to prevent runaway loops
+- Type request bodies explicitly — never use raw `any` from `req.json()`
+
+## Tool Definitions
+
+Every tool follows the `tool()` + Zod pattern:
+
+```typescript
+tool({
+  description: `Clear, specific description.`,
+  inputSchema: z.object({
+    param: z.string().describe("What this controls"),
+  }),
+  execute: async ({ param }) => {
+    // 1. Validate via sandbox.ts
+    // 2. Execute logic
+    // 3. Return { success: boolean, ...data } or { success: false, error: string }
+  },
+})
+```
+
+### Rules
+
+- Every `execute` must return an object with a `success: boolean` field
+- Error responses must include an `error` string with actionable context (not just `String(e)`)
+- File system operations must go through `validateWritePath` / `validateEditPath` first
+- Shell operations must go through `executeCommand` which validates against `BLOCKED_COMMANDS`
+- Network operations need explicit timeouts (default 15s for fetch, 30s for commands)
+- Truncate large outputs to a max length — never return unbounded data to the model
+
+## Sandbox Security Layer (`sandbox.ts`)
+
+This is the trust boundary between the AI model and the operating system.
+
+### Rules
+
+- `BLOCKED_COMMANDS` and `BLOCKED_EDIT_PATTERNS` are append-only — never remove entries
+- `ALLOWED_WRITE_PATHS` is a whitelist — new write directories require explicit addition
+- Path traversal (`..`) must always be rejected
+- Absolute paths must always be rejected for edit operations
+- The `getProjectRoot()` function walks up to find `.git` or `.claude` — never hard-code paths
+- Buffer sizes for stdout/stderr must be capped to prevent memory exhaustion
+
+## System Prompt (`prompts/system.ts`)
+
+- Skills are auto-discovered from `.claude/skills/` at runtime — never hard-code skill names
+- The prompt must list all tools with clear descriptions so the model knows what's available
+- Changes to the system prompt are high-impact — version and evaluate before shipping
+- Keep the prompt under 2000 tokens to leave context budget for conversation

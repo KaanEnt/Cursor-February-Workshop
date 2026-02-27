@@ -1,0 +1,133 @@
+---
+description: Frontend conventions for client-side code — React components, containers, shell, Zustand stores, Tailwind styling, Framer Motion animations, and the AI SDK React hooks. Applies to all client-side TypeScript/TSX in the Next.js app.
+globs: ["app/src/shell/**/*.tsx", "app/src/containers/**/*.tsx", "app/src/containers/**/*.ts", "app/src/components/**/*.tsx", "app/src/app/**/page.tsx", "app/src/app/**/layout.tsx"]
+alwaysApply: false
+---
+
+# Frontend Conventions
+
+Client-side code runs in the browser. It handles rendering, user interaction, state management, and communication with the backend API routes.
+
+## Architecture Boundary
+
+Frontend code lives in:
+- `src/shell/` — AppShell grid layout + ContainerSlot isolation wrappers
+- `src/containers/` — Self-contained UI regions (Header, Sidebar, Chat, etc.)
+- `src/components/ui/` — Radix-based design system primitives
+- `src/app/**/page.tsx`, `layout.tsx` — Next.js pages and layouts
+
+Frontend code must **never**:
+- Import from `src/lib/tools/` or `src/lib/prompts/` (server-only modules)
+- Use Node.js APIs (`fs`, `path`, `child_process`, `process.env` for secrets)
+- Access the AI SDK's server functions (`streamText`, `tool`) — use `useChat` from `@ai-sdk/react` instead
+- Read environment variables directly — secrets stay server-side, exposed only through API routes
+
+## Client Directive
+
+Any component that uses hooks, event handlers, browser APIs, or Zustand must declare `"use client"` as the first line. Components that are purely presentational and data-fetched via server components should omit it.
+
+```typescript
+// Needs "use client" — has hooks and interactivity
+"use client";
+
+import { useState } from "react";
+export function Counter() { ... }
+
+// No directive needed — server component rendering static content
+export function StaticBanner() {
+  return <div>Welcome</div>;
+}
+```
+
+## Component Patterns
+
+### Container Components (`src/containers/`)
+
+Containers are the primary UI building blocks. Each one:
+- Lives in its own directory: `src/containers/<Name>/<Name>.tsx`
+- Has a typed props interface (even if empty)
+- Is wrapped by `ContainerSlot` (ErrorBoundary + Suspense) in `AppShell`
+- Cleans up all effects on unmount (containers can be remounted via key changes)
+
+```typescript
+"use client";
+
+interface HeaderProps {}
+
+export function Header({}: HeaderProps) {
+  // all hooks, state, effects here
+  return ( ... );
+}
+```
+
+### UI Primitives (`src/components/ui/`)
+
+Primitives wrap Radix UI and are styled with Tailwind:
+- Always use `forwardRef` and spread `...props`
+- Merge classNames via `cn()` — never replace consumer classes
+- Use `cva` for variant typing
+- Zero business logic — purely presentational
+
+## State Management
+
+### Zustand for Persistent State
+
+State that must survive container remounts (key-based reload, HMR) uses Zustand stores at module scope:
+
+```typescript
+import { create } from "zustand";
+
+interface ChatState {
+  isOpen: boolean;
+  toggleOpen: () => void;
+  setOpen: (open: boolean) => void;
+}
+
+export const useChatStore = create<ChatState>((set) => ({
+  isOpen: false,
+  toggleOpen: () => set((s) => ({ isOpen: !s.isOpen })),
+  setOpen: (open) => set({ isOpen: open }),
+}));
+```
+
+- Always use selectors: `useChatStore((s) => s.isOpen)` — never `useChatStore()`
+- Store interfaces must be explicit — no `any`, no untyped `set`
+
+### React State for Ephemeral UI
+
+Use `useState` / `useReducer` for state that should reset on remount (form inputs, scroll position, local toggles).
+
+## AI Integration (Client Side)
+
+The only client-side AI hook is `useChat` from `@ai-sdk/react`:
+
+```typescript
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+
+const { messages, sendMessage, status, error } = useChat({
+  transport: new DefaultChatTransport({ api: "/api/chat" }),
+});
+```
+
+### Rules
+
+- `useChat` lives exclusively in the Chat container — no other container calls the AI API
+- The `api` endpoint must match the backend route (`/api/chat`)
+- Check `status` for loading states: `"streaming" | "submitted"` means loading
+- Never pass API keys or model config on the client — all configuration lives server-side
+
+## Styling
+
+- All styling through Tailwind utility classes — no inline `style` objects except for dynamic values the design system can't express
+- Use CSS custom properties (`var(--font-geist-sans)`) for font families
+- Use OKLCH color tokens defined in `globals.css` — never hard-code hex/rgb
+- Animations use Framer Motion (`motion.div`) with spring physics — keep transitions under 300ms
+- Respect `prefers-reduced-motion` for non-essential animations
+
+## Accessibility
+
+- Interactive `<div>` elements must have `role="button"`, `tabIndex={0}`, and keyboard handlers
+- All icon-only buttons need `aria-label`
+- Form inputs need associated labels
+- Focus states must be visible — never remove outlines without replacement
