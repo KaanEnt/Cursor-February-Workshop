@@ -1,0 +1,111 @@
+---
+description: After completing significant agent actions (creating files, modifying API routes, updating config, committing code), automatically run associated scripts, webhooks, or shell commands defined in the project's hook registry.
+alwaysApply: true
+---
+
+# Post-Action Hooks
+
+Run scripts, webhooks, or shell commands automatically after the agent completes certain actions. This keeps external systems in sync without manual intervention.
+
+## Hook Registry
+
+The project maintains a hook registry at `.cursor/hooks.json`. If this file exists, read it and execute matching hooks after each qualifying action. If the file does not exist, skip all post-action hooks silently.
+
+### Registry Format
+
+```json
+{
+  "hooks": [
+    {
+      "trigger": "file:create",
+      "glob": "src/app/api/**/*.ts",
+      "command": "npm run generate:openapi",
+      "description": "Regenerate OpenAPI spec when new API routes are added"
+    },
+    {
+      "trigger": "file:modify",
+      "glob": "src/lib/prompts/**/*.ts",
+      "command": "curl -s -X POST https://hooks.example.com/prompt-changed -H 'Content-Type: application/json' -d '{\"file\": \"{{filepath}}\"}'",
+      "description": "Notify prompt tracking service when prompts change"
+    },
+    {
+      "trigger": "git:commit",
+      "command": "curl -s -X POST https://hooks.example.com/commit -H 'Content-Type: application/json' -d '{\"message\": \"{{commit_message}}\", \"sha\": \"{{commit_sha}}\"}'",
+      "description": "Post commit info to team webhook"
+    },
+    {
+      "trigger": "test:pass",
+      "command": "node scripts/notify-slack.js --status=pass",
+      "description": "Notify Slack when tests pass"
+    }
+  ]
+}
+```
+
+### Supported Triggers
+
+| Trigger | Fires When |
+|---------|-----------|
+| `file:create` | A new file is created by the agent |
+| `file:modify` | An existing file is edited by the agent |
+| `file:delete` | A file is deleted by the agent |
+| `git:commit` | The agent creates a git commit |
+| `git:push` | The agent pushes to a remote |
+| `test:pass` | Tests run by the agent pass |
+| `test:fail` | Tests run by the agent fail |
+| `deploy` | A deployment command is executed |
+| `copy:written` | User-facing copy was written (pairs with copy-writer hook) |
+
+### Template Variables
+
+Commands can use these placeholders, replaced at execution time:
+
+| Variable | Value |
+|----------|-------|
+| `{{filepath}}` | Absolute path to the affected file |
+| `{{filename}}` | Just the filename (no directory) |
+| `{{relative_path}}` | Path relative to project root |
+| `{{commit_message}}` | The commit message (git triggers only) |
+| `{{commit_sha}}` | The short SHA (git triggers only) |
+| `{{branch}}` | Current git branch name |
+| `{{timestamp}}` | ISO 8601 timestamp |
+
+## Process
+
+### 1. Check for the registry
+
+After completing any qualifying action, check if `.cursor/hooks.json` exists. If not, do nothing.
+
+### 2. Match triggers
+
+Compare the action just completed against the `trigger` field of each hook entry. If the hook also has a `glob` field, check that the affected file path matches the glob pattern.
+
+### 3. Expand template variables
+
+Replace any `{{variable}}` placeholders in the `command` string with actual values from the current context.
+
+### 4. Execute the command
+
+Run the command using the shell tool. If the command fails:
+- Log the error with the hook's description and exit code
+- Do NOT block the agent's main workflow — hooks are fire-and-forget
+- Report the failure to the user at the end of the response
+
+### 5. Report execution
+
+At the end of the response, if any hooks fired, include a brief summary:
+
+```
+Post-action hooks:
+  ✓ Regenerate OpenAPI spec when new API routes are added
+  ✓ Notify prompt tracking service when prompts change
+  ✗ Post commit info to team webhook (exit code 1)
+```
+
+## Safety Rules
+
+- Never execute hooks that contain `rm -rf`, `format`, `DROP`, or other destructive patterns without explicit user confirmation
+- Hooks that modify git state (reset, rebase, force-push) require user confirmation
+- Curl commands to localhost or internal IPs are allowed; commands to external URLs execute without confirmation
+- If a hook takes longer than 30 seconds, background it and report the timeout
+- The agent must never write to or modify `hooks.json` unless the user explicitly asks to add/remove a hook

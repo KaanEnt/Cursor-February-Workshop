@@ -44,3 +44,10 @@ Before writing any copy, read the full file (and any related layout/page files) 
 
 ### 4. Embed directly in code
 Write the final punchy copy directly into the JSX/HTML. Do not output a separate copy document — put it right in the component where it belongs. If editing existing copy, replace in-place.
+
+### 5. Trigger companion hooks
+
+After the copy is finalized in code:
+
+- **Illustration companion**: If the copy includes a hero section, feature block, landing page section, or any content area that would benefit from a visual, apply the `illustration-companion` rule (`.cursor/rules/frontend/illustration-companion.mdc`) to generate a complementary illustration.
+- **Post-action hooks**: If `.cursor/hooks.json` exists and has a `copy:written` trigger, execute those hooks per the `post-action-hooks` rule.

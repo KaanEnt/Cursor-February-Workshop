@@ -1,0 +1,75 @@
+---
+description: After writing or editing user-facing page copy in frontend components, generate a complementary vector illustration or decorative image to pair with the content. Activates after the copy-writer hook has produced final text.
+globs: ["**/*.tsx", "**/*.jsx", "**/*.html", "**/*.vue", "**/*.svelte", "**/*.astro"]
+alwaysApply: false
+---
+
+# Illustration Companion Hook
+
+When the copy-writer hook has finished writing user-facing page content, generate a complementary illustration to accompany the text.
+
+## Activation
+
+This rule applies **after** copy has been written or edited in a frontend component, specifically when the content includes:
+- Hero sections, landing pages, or feature sections
+- Benefit blocks, value propositions, or product explanations
+- Empty states, onboarding screens, or error pages
+- Any content section where a visual would reinforce the message
+
+This rule does NOT apply when:
+- Only button labels, form labels, or micro-copy were changed
+- The edit was structural/styling with no new content narrative
+- The user explicitly says they don't want illustrations
+
+## Process
+
+### 1. Extract the visual concept from the copy
+
+Read the copy that was just written and identify:
+- **Subject**: What is the copy about? (e.g., team collaboration, speed, security)
+- **Emotion**: What should the reader feel? (e.g., confident, excited, relieved)
+- **Audience**: Who is this for? (developers, marketers, parents)
+- **Page context**: Where does this sit in the layout? (hero, feature grid, sidebar)
+
+### 2. Build the image description
+
+Construct a detailed prompt for image generation following these rules:
+
+- **Style**: Default to flat vector illustration with clean lines, limited color palette (3-5 colors), and modern SaaS aesthetic unless the project has an established visual style
+- **Composition**: Match the layout context — wide/landscape for heroes, square for feature cards, vertical for sidebars
+- **Content**: Illustrate the *benefit* or *outcome* described in the copy, not the literal product UI
+- **No text in images**: Never include text, labels, or words in the generated image — the copy handles that
+- **Brand alignment**: If a design system or color tokens exist in the project, reference those colors
+
+Example mappings:
+
+| Copy Theme | Illustration Concept |
+|------------|---------------------|
+| "Ship features faster" | Rocket launching from a laptop, flat vector style |
+| "Your data, locked down" | Shield with a lock icon, surrounded by abstract data nodes |
+| "Work together, anywhere" | People collaborating around a floating workspace, isometric style |
+| "Stop wasting time on reports" | Clock breaking free from chains, minimal line art |
+
+### 3. Generate the image
+
+Use the image generation tool with:
+- A detailed description built from step 2
+- Filename: `<section-slug>-illustration.png` (e.g., `hero-illustration.png`, `feature-speed-illustration.png`)
+- If the project has existing illustrations, pass one as a reference image to maintain visual consistency
+
+### 4. Reference the image in code
+
+After generation, suggest where to place the image in the component:
+- Add an `<img>` or `<Image>` tag in the appropriate location
+- Use descriptive alt text derived from the copy's SMIT (Single Most Important Takeaway)
+- Apply responsive sizing classes consistent with the project's styling approach
+
+## Style Guide Defaults
+
+When no project-specific style guide exists, use these defaults:
+
+- **Primary style**: Flat vector / line illustration
+- **Color palette**: Pull from the project's Tailwind config or CSS custom properties; fall back to a neutral blue/purple/teal palette
+- **Complexity**: Simple — 1-3 focal elements, generous whitespace, no photorealism
+- **Format**: PNG with transparent background when possible
+- **Aspect ratios**: Hero = 16:9, Feature card = 1:1, Sidebar = 3:4
