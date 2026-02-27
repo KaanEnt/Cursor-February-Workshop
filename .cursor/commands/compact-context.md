@@ -43,15 +43,37 @@ Produce a markdown document structured as a **briefing for a new agent** that ha
 <Specific instructions for the next agent: what to read first, what commands are available, what rules apply>
 ```
 
-### 4. Save and Present
+### 4. Save and Generate Deeplink
 
 Save the compacted context to `.specstory/context/<date>-compact.md`.
 
-Then present it to the user with:
-```
-Context compacted and saved. To start a new chat with this context, open a new Cursor chat and paste:
+Then generate a Cursor deeplink that opens a new chat pre-filled with the handoff prompt. Build the URL like this:
 
-"Continue from the briefing at .specstory/context/<date>-compact.md — read it first, then ask me what to work on next."
+```
+cursor://anysphere.cursor-deeplink/prompt?text=<URL-encoded prompt>
+```
+
+The prompt text should be:
+```
+Read the project briefing at .specstory/context/<date>-compact.md — this contains the full context from the previous session. Read it completely before doing anything else, then ask me what to work on next.
+```
+
+To generate the deeplink, run a shell command:
+
+```bash
+node -e "const text = 'Read the project briefing at .specstory/context/<date>-compact.md — this contains the full context from the previous session. Read it completely before doing anything else, then ask me what to work on next.'; const url = new URL('cursor://anysphere.cursor-deeplink/prompt'); url.searchParams.set('text', text); console.log(url.toString());"
+```
+
+Present the result to the user as:
+
+```
+Context compacted and saved to .specstory/context/<date>-compact.md
+
+Click to continue in a new chat:
+<deeplink URL>
+
+Or web link:
+https://cursor.com/link/prompt?text=<same encoded text>
 ```
 
 ## Rules
